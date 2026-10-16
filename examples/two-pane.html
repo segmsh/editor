@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@segmsh/editor — two panes</title>
+  <link rel="stylesheet" href="editor.css">
+  <style>
+    body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f3f4f6; }
+    header { display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+    /* One scroll container for both panes keeps them in sync for free */
+    .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; height: calc(100vh - 80px); overflow: auto; box-sizing: border-box; }
+    .pane { padding: 24px 32px; background: #fff; border-radius: 8px; align-self: start; min-width: 0; }
+    .sm-segment.is-untranslated:not(.sm-editing) { opacity: 0.45; }
+    /* Hover and its mirror in the other pane share the editor's hover colour, so the pair reads as one */
+    .sm-peer { background: var(--sm-hover); }
+    .sm-peer:not(.sm-segment, td, th) { border-radius: 4px; box-shadow: 0 0 0 4px var(--sm-hover); }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Two-pane translation</strong>
+    <select id="sample"></select>
+    <a href="index.html">← single editor</a>
+  </header>
+  <div class="panes">
+    <div class="pane" id="source"></div>
+    <div class="pane" id="target"></div>
+  </div>
+
+  <script src="segmsh-editor.min.js"></script>
+  <script src="documents.js"></script>
+  <script>
+    if (!window.SegmshEditor || !window.SAMPLE_DOCUMENTS) document.body.insertAdjacentHTML("afterbegin", "<p style=\"padding:16px;color:#c62828\">Run <code>npm run examples</code> in the editor package first.</p>");
+  </script>
+  <script>
+    // Everything below is host code (what localizesh would do) built on the public API only.
+
+    const sourceOf = (id) => source.getSegment(id)?.text;
+    const source = SegmshEditor.createEditor(document.getElementById("source"), { readOnly: true });
+    const target = SegmshEditor.createEditor(document.getElementById("target"), {
+      segmentClass: (segment) => segment.text === sourceOf(segment.id) ? "is-untranslated" : null,
+      actions: [{ label: "Copy source", run: ({ segment, setText }) => setText(sourceOf(segment.id)) }],
+    });
+
+    // Mirror hover and the active segment across panes
+    source.on("hover", ({ id }) => target.highlight(id, "sm-peer"));
+    target.on("hover", ({ id }) => source.highlight(id, "sm-peer"));
+    target.on("focus", ({ id }) => source.highlight(id));
+    target.on("blur", () => source.highlight(null));
+    target.on("change", ({ id }) => target.refresh(id));
+
+    // Equalize heights of blocks with the same tree path
+    const align = (a, b) => {
+      const peers = new Map(b.getBlocks().map((block) => [block.key, block.element]));
+      const pairs = a.getBlocks()
+        .filter((block) => peers.has(block.key))
+        .map((block) => [block.element, peers.get(block.key)]);
+      const property = (element) => element.tagName === "TR" ? "height" : "minHeight";
+      let frame = 0;
+
+      const sync = () => {
+        frame = 0;
+        const elements = pairs.flat();
+        elements.forEach((element) => {
+          element.style.boxSizing = "border-box";
+          element.style[property(element)] = "";
+        });
+        const heights = pairs.map(([x, y]) => Math.max(x.offsetHeight, y.offsetHeight));
+        pairs.forEach(([x, y], index) => {
+          x.style[property(x)] = y.style[property(y)] = `${heights[index]}px`;
+        });
+      };
+
+      const schedule = () => frame ||= requestAnimationFrame(sync);
+
+      // Width changes (window resize) reflow the blocks
+      const resizes = new ResizeObserver(schedule);
+      pairs.flat().forEach((element) => resizes.observe(element));
+
+      // Content changes (opening, closing, typing) can shrink a block, which the
+      // ResizeObserver can't see while our min-height pins its size
+      const mutations = new MutationObserver(schedule);
+      [a.element, b.element].forEach((element) =>
+        mutations.observe(element, { childList: true, subtree: true, characterData: true }));
+
+      return () => {
+        resizes.disconnect();
+        mutations.disconnect();
+        cancelAnimationFrame(frame);
+      };
+    };
+
+    const sample = document.getElementById("sample");
+    for (const name of Object.keys(SAMPLE_DOCUMENTS)) sample.add(new Option(name, name));
+
+    let unalign = () => {};
+    const load = () => {
+      unalign();
+      source.setDocument(SAMPLE_DOCUMENTS[sample.value]);
+      target.setDocument(SAMPLE_TRANSLATIONS[sample.value]);
+      unalign = align(source, target);
+    };
+
+    sample.onchange = load;
+    load();
+  </script>
+</body>
+</html>

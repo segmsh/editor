@@ -1,0 +1,45 @@
+{
+  "name": "@segmsh/editor",
+  "repository": "segmsh/editor",
+  "license": "Apache-2.0",
+  "author": "Segm.sh",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "unpkg": "dist/segmsh-editor.min.js",
+  "jsdelivr": "dist/segmsh-editor.min.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./editor.css": "./dist/editor.css",
+    "./segmsh-editor.min.js": "./dist/segmsh-editor.min.js"
+  },
+  "files": [
+    "/dist"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc && cp src/editor.css dist/editor.css && esbuild src/index.ts --bundle --minify --format=iife --global-name=SegmshEditor --target=es2020 --outfile=dist/segmsh-editor.min.js",
+    "test": "vitest run",
+    "examples": "npm run build && node examples/documents.mjs"
+  },
+  "peerDependencies": {
+    "@segmsh/core": "^0.2.0"
+  },
+  "devDependencies": {
+    "@segmsh/core": "^0.2.0",
+    "@segmsh/html": "^0.1.0",
+    "@segmsh/json": "^0.1.0",
+    "@segmsh/md": "^0.1.1",
+    "@segmsh/toml": "^0.1.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.1.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+
+.idea/
+
+*.iml
+*.log
+
+.npmrc
+
+examples/editor.css
+examples/segmsh-editor.min.js

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@segmsh/editor</title>
+  <link rel="stylesheet" href="editor.css">
+  <style>
+    body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f3f4f6; }
+    header { display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; padding: 16px; }
+    #editor { padding: 24px 32px; background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
+    aside { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    pre { margin: 0; padding: 8px; max-height: 40vh; overflow: auto; font-size: 12px; background: #fff; border-radius: 8px; white-space: pre-wrap; word-break: break-all; }
+    @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>@segmsh/editor</strong>
+    <select id="sample"></select>
+    <label><input type="checkbox" id="readonly"> read-only</label>
+    <button id="get">getDocument()</button>
+    <a href="two-pane.html">two-pane example →</a>
+  </header>
+  <main>
+    <div id="editor"></div>
+    <aside>
+      <strong>Events</strong>
+      <pre id="log"></pre>
+      <strong>Output</strong>
+      <pre id="output">Click getDocument()</pre>
+    </aside>
+  </main>
+
+  <script src="segmsh-editor.min.js"></script>
+  <script src="documents.js"></script>
+  <script>
+    if (!window.SegmshEditor || !window.SAMPLE_DOCUMENTS) document.body.insertAdjacentHTML("afterbegin", "<p style=\"padding:16px;color:#c62828\">Run <code>npm run examples</code> in the editor package first.</p>");
+  </script>
+  <script>
+    const sample = document.getElementById("sample");
+    const log = document.getElementById("log");
+
+    for (const name of Object.keys(SAMPLE_DOCUMENTS)) sample.add(new Option(name, name));
+
+    const editor = SegmshEditor.createEditor(document.getElementById("editor"), {
+      document: SAMPLE_DOCUMENTS[sample.value],
+      actions: [
+        { label: "UPPERCASE", title: "Example host action", run: ({ text, setText }) => setText(text.replace(/[^{}]+(?=\{|$)/g, (part) => part.toUpperCase())) },
+        { label: "Clear", run: ({ setText }) => setText("") },
+      ],
+    });
+
+    for (const name of ["focus", "blur", "input", "change", "invalid"]) {
+      editor.on(name, (event) => {
+        log.textContent = `${name} ${JSON.stringify(event, (key, value) => key === "segment" ? undefined : value)}\n` + log.textContent;
+      });
+    }
+
+    sample.onchange = () => editor.setDocument(SAMPLE_DOCUMENTS[sample.value]);
+    document.getElementById("readonly").onchange = (event) => editor.setReadOnly(event.target.checked);
+    document.getElementById("get").onclick = () => {
+      document.getElementById("output").textContent = JSON.stringify(editor.getDocument().segments, null, 2);
+    };
+  </script>
+</body>
+</html>

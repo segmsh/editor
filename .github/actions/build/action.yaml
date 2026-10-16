@@ -1,0 +1,14 @@
+name: Build
+description: Checkout, setup Node.js, install dependencies, and build
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v6
+      with:
+        registry-url: "https://registry.npmjs.org"
+        node-version: 22
+        cache: npm
+    - run: npm ci
+      shell: bash
+    - run: npm run build
+      shell: bash
