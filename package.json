@@ -38,7 +38,7 @@
     "@segmsh/md": "^0.1.1",
     "@segmsh/toml": "^0.1.0",
     "esbuild": "^0.28.2",
-    "jsdom": "^30.1.3",
+    "jsdom": "^31.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
   }
